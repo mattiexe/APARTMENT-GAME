@@ -1,100 +1,104 @@
 # Way Down
 
-A dialogue-heavy survival game. You wake up on the top floor of your apartment
-building in the middle of the night. Something is wrong with the building. Get
-out alive, one floor at a time.
+Een death-game mystery visual novel. Acht vreemden worden wakker op de bovenste
+verdieping van een appartementsgebouw. Elke verdieping is een stage met een regel;
+de lift gaat pas naar beneden als de quota gehaald is. Vertrouw niemand.
 
-## Play
+Het verhaal, de wereld en de personages staan in **[STORY.md](STORY.md)**.
 
-Open `index.html` in a browser. No install or build step.
+## Spelen
 
-- Click a choice, or press **1–9**.
-- Click the text, or press **Space**, to skip the typing effect.
-- Progress saves automatically in your browser. If you die, you can retry the floor you died on.
+Open `index.html` in een browser. Niks te installeren.
 
-## How it works
+- Klik op een keuze, of druk op **1–9**.
+- Klik op de tekst of druk op **spatie** om het typen over te slaan.
+- **Rules**: de regels van elke verdieping en of de quota al gehaald is.
+- **Dossier**: wat je weet over iedereen. Dat verandert naarmate je dingen ontdekt.
+- Voortgang wordt automatisch bewaard. Als je sterft, kan je de verdieping opnieuw doen.
 
-- **Health**: physical damage. At 0, you die.
-- **Sanity**: fear. Seeing awful things and making bad calls drain it. At 0, the building wins.
-- **Inventory**: items unlock choices (`flashlight`, `crowbar`, …).
-- **Flags**: invisible memory of what you did (talked to someone, learned a rule…). Later floors can react to them.
+## Bestanden
 
-Each floor is one file in `js/floors/`. The top floor is the highest number registered.
-Going below the lowest written floor shows a "to be continued" screen.
+| Bestand | Wat |
+| --- | --- |
+| `js/characters.js` | Alle personages: naam, kleur, dossiertekst, hoed. |
+| `js/floors/floor10.js`, `floor9.js`, … | Eén bestand per verdieping. |
+| `js/engine.js` | De engine. Normaal hoef je hier niet aan te komen. |
+| `tools/check.js` | Controleert je verdiepingen op fouten. |
 
-## Writing a new floor
+## Een nieuwe verdieping schrijven
 
-1. Copy `js/floors/floor10.js` to `js/floors/floor9.js` and change `number`, `title` and the nodes.
-2. Add `<script src="js/floors/floor9.js"></script>` to `index.html` with the other floors.
-3. Run `node tools/check.js` to catch broken links between nodes.
+1. Kopieer `js/floors/floor9.js` naar `js/floors/floor8.js` en pas `number`, `title`, `rule` en de nodes aan.
+2. Voeg `<script src="js/floors/floor8.js"></script>` toe in `index.html`, onder de andere verdiepingen.
+3. Run `node tools/check.js` om kapotte links en onbekende personages te vinden.
 
-A floor looks like this:
+Een verdieping ziet er zo uit:
 
 ```js
 Game.registerFloor({
-  number: 9,
-  title: "Short floor name",
-  start: "landing",              // first node shown on this floor
+  number: 8,
+  title: "The Bathhouse",
+  background: "linear-gradient(180deg, #12303a, #071216)",  // kleur van het scherm
+  start: "arrive",     // eerste scène als je hier voor het eerst aankomt
+  hub: "hall",         // scène waar je terechtkomt als je later met de lift terugkomt
+  rule: {
+    text: "Quota: ...",                      // wat in het Rules-paneel staat
+    requires: { flag: "quota_done" },        // wanneer de quota gehaald is
+  },
   nodes: {
-    landing: {
-      speaker: "dez",            // omit for narration; ids are in js/main.js
-      text: "What's shown on screen.",
-      effects: { sanity: -10 },  // applied when this node is shown
+    arrive: {
+      show: ["mira", "odile"],   // wie er op het scherm staat (blijft tot je het verandert)
+      speaker: "mira",           // wie praat; weglaten = vertelling
+      text: "Wat er gezegd wordt.",
+      next: "hall",              // één "Continue"-knop
+    },
+    hall: {
+      text: "...",
+      elevator: true,            // voegt de liftknoppen toe (naar beneden / terug naar boven)
       choices: [
-        { text: "Use the crowbar.", next: "pry", requires: { item: "crowbar" } },
-        { text: "Go back.", next: "hall" },
+        { text: "Praat met Odile.", next: "odile_talk" },
+        { text: "Gebruik de sleutel.", next: "door", requires: { item: "key" } },
       ],
     },
-    hall:  { text: "...", next: "stairs" },  // just a "Continue" button
-    stairs: { text: "...", descend: true },  // a button that goes down a floor
+    // ...
   },
 });
 ```
 
-### Node fields
+### Scènes (nodes)
 
-| Field          | What it does |
-| -------------- | ------------ |
-| `text`         | The text to show. Use `\n\n` for paragraph breaks. |
-| `speaker`      | Character id (see `js/main.js`). No speaker = italic narration. |
-| `choices`      | List of choices (see below). |
-| `next`         | If there are no choices: a single **Continue** button to this node. |
-| `descend`      | If `true`: a button that goes down to the next floor. `descendText` changes its label. |
-| `effects`      | Changes applied when the node is shown (see below). |
-| `death`        | Text for a death screen. Ends the run (the player can retry the floor). |
-| `deathText`    | Custom death text if this node's effects drop health to 0. |
-| `madnessText`  | Custom text if this node's effects drop sanity to 0. |
-| `ending`       | Text for a win screen. Use it in the lobby. |
+| Veld | Wat het doet |
+| --- | --- |
+| `text` | De tekst. `\n\n` voor een nieuwe alinea. |
+| `speaker` | Wie praat (id uit `characters.js`). Weglaten = cursieve vertelling. |
+| `show` | Lijst van personages op het scherm. `[]` = niemand. |
+| `next` | Eén **Continue**-knop naar deze scène. |
+| `choices` | Lijst van keuzes (zie hieronder). |
+| `elevator` | `true` = liftknoppen toevoegen. |
+| `effects` | Wat er gebeurt als de scène getoond wordt (zie hieronder). |
+| `death` | Tekst van een game-over scherm (de speler kan de verdieping opnieuw doen). |
+| `ending` | Tekst van een eindscherm. |
 
-### Choice fields
+### Keuzes
 
-| Field        | What it does |
-| ------------ | ------------ |
-| `text`       | The button label. |
-| `next`       | The node to go to. |
-| `descend`    | Go down a floor instead of to a node. |
-| `requires`   | Only show this choice if the conditions are met (see below). |
-| `lockedText` | Show the choice greyed out with this text instead of hiding it when it's locked. |
-| `effects`    | Changes applied when this choice is picked. |
+| Veld | Wat het doet |
+| --- | --- |
+| `text` | Tekst op de knop. |
+| `next` | Naar welke scène. |
+| `requires` | Alleen tonen als de voorwaarden kloppen. |
+| `lockedText` | Toon de keuze grijs met deze tekst in plaats van ze te verbergen. |
+| `effects` | Wat er gebeurt als je deze keuze kiest. |
 
-### Conditions (`requires`)
+### Voorwaarden (`requires`)
 
-`item`, `notItem`, `flag`, `notFlag` (each a string or a list), `minSanity`,
-`maxSanity`, `minHealth`.
+`item`, `notItem`, `flag`, `notFlag`, `anyFlag` (tekst of lijst), `alive`, `dead`
+(personage-id's), `deaths` (minstens zoveel doden).
 
-### Effects
+### Effecten (`effects`)
 
-`health`, `sanity` (positive or negative numbers), `give`, `take` (items),
-`set`, `unset` (flags). Item and flag fields take a string or a list.
-
-## Story so far
-
-| Floor | Title          | What happens |
-| ----- | -------------- | ------------ |
-| 12    | Home           | Wake up during a blackout. Mrs. Okafor knocks; her husband Tomas went to the lobby and never came back. Get the stairwell key. Don't lean into the elevator shaft. |
-| 11    | The Barricade  | Stairwell A is blocked. Talk your way past Dez's barricade. Learn the rule: *never answer the voice*. Reach Stairwell B. |
-| 10    | Laundry        | Stairwell B is flooded. "Building management" talks to you over the intercom. Cut the power to the sparking laundry room to reach the service stairs. |
-| 9 → 1 | *not written*  | |
-
-Ideas for later floors: find out what happened to Tomas, who "building management"
-really is, what's in the stairwell water, and what's waiting in the lobby.
+| Effect | Voorbeeld |
+| --- | --- |
+| `give` / `take` | `give: "brass key"`: voorwerp krijgen of verliezen. |
+| `set` / `unset` | `set: "saw_tv"`: iets onthouden voor later. |
+| `meet` | `meet: "noor"`: personage komt in het dossier. |
+| `bio` | `bio: { noor: "Nieuwe dossiertekst." }`: dossier herschrijven na een ontdekking. |
+| `kill` | `kill: "bram"`: personage sterft (grijs met een kruis, telt mee voor `deaths`). |

@@ -1,13 +1,12 @@
-// Characters who can speak. Use these ids as `speaker` in floor nodes.
-Game.registerCharacters({
-  you:     { name: "You",         color: "#e0b25a" },
-  okafor:  { name: "Mrs. Okafor", color: "#c792ea" },
-  dez:     { name: "Dez",         color: "#7fc8a9" },
-  voice:   { name: "???",         color: "#ff6b5e" },
-  intercom:{ name: "Intercom",    color: "#9aa5b1" },
-});
+const $ = (id) => document.getElementById(id);
 
-document.getElementById("menu-btn").addEventListener("click", () => {
+// Blur after clicking so Space (used to skip text) doesn't re-press the button.
+$("rules-btn").addEventListener("click", (e) => { e.currentTarget.blur(); Game.showRules(); });
+$("phone-btn").addEventListener("click", (e) => { e.currentTarget.blur(); Game.showPhone(); });
+$("cast-btn").addEventListener("click", (e) => { e.currentTarget.blur(); Game.showCast(); });
+$("panel-close").addEventListener("click", Game.closePanel);
+$("panel").addEventListener("click", (e) => { if (e.target.id === "panel") Game.closePanel(); });
+$("menu-btn").addEventListener("click", () => {
   if (confirm("Restart from the top floor? Your progress will be lost.")) Game.restart();
 });
 

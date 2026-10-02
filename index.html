@@ -9,35 +9,40 @@
 <body>
   <div id="app">
     <header id="hud">
-      <div id="floor-badge"><span id="floor-num">12</span><small>F</small></div>
-      <div id="stats">
-        <div class="stat">
-          <label>Health</label>
-          <div class="bar"><div id="health-bar" class="fill health"></div></div>
-        </div>
-        <div class="stat">
-          <label>Sanity</label>
-          <div class="bar"><div id="sanity-bar" class="fill sanity"></div></div>
-        </div>
-      </div>
-      <button id="menu-btn" title="Restart">⟲</button>
+      <div id="floor-badge"><span id="floor-num">10</span><small>F</small></div>
+      <div id="floor-theme"></div>
+      <nav>
+        <button id="phone-btn">Phone <span id="phone-badge" hidden>0</span></button>
+        <button id="rules-btn">Rules</button>
+        <button id="cast-btn">Dossier</button>
+        <button id="menu-btn" title="Restart">⟲</button>
+      </nav>
     </header>
 
-    <div id="inventory"></div>
-
-    <main id="scene">
-      <div id="floor-title"></div>
-      <div id="speaker"></div>
-      <div id="text"></div>
-      <div id="choices"></div>
+    <main id="stage">
+      <div id="portraits"></div>
+      <div id="dialogue">
+        <div id="speaker"></div>
+        <div id="text"></div>
+      </div>
     </main>
+
+    <div id="choices"></div>
+    <div id="inventory"></div>
   </div>
 
-  <!-- Engine first, then each floor registers itself. Add new floors here. -->
+  <div id="panel" hidden>
+    <div id="panel-box">
+      <div id="panel-head"><h2 id="panel-title"></h2><button id="panel-close">✕</button></div>
+      <div id="panel-body"></div>
+    </div>
+  </div>
+
+  <!-- Engine first, then characters, then each floor. Add new floors here. -->
   <script src="js/engine.js"></script>
-  <script src="js/floors/floor12.js"></script>
-  <script src="js/floors/floor11.js"></script>
+  <script src="js/characters.js"></script>
   <script src="js/floors/floor10.js"></script>
+  <script src="js/floors/floor9.js"></script>
   <script src="js/main.js"></script>
 </body>
 </html>

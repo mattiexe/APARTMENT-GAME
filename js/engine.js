@@ -1,23 +1,27 @@
 /*
- * Way Down — dialogue engine.
+ * Way Down — visual novel engine.
  *
- * Floors register themselves with Game.registerFloor({...}). Each floor is a
- * set of dialogue "nodes". A node shows some text and offers choices; choices
- * point at other nodes, can require items/flags, and can change stats.
- * See README.md for the full node format.
+ * The building is a stack of floors. Each floor is a "stage" with its own
+ * theme and its own rule. The elevator only goes down once that rule is met;
+ * it can always go back up to floors you've already cleared.
+ *
+ * Floors register themselves with Game.registerFloor({...}) and characters
+ * with Game.registerCharacters({...}). See README.md for the full format.
  */
 const Game = (() => {
-  const SAVE_KEY = "waydown-save";
-  const MAX_STAT = 100;
+  const SAVE_KEY = "waydown-save-v2";
 
   const floors = {};       // floor number -> floor definition
-  const characters = {};   // id -> { name, color }
+  const characters = {};   // id -> { name, color, bio, image, silent }
 
   let state = null;        // the live game state
-  let checkpoint = null;   // copy of state at the start of the current floor
+  let checkpoint = null;   // copy of state when the current floor was first entered
   let typing = null;       // active typewriter, if any
+  let pendingChanges = []; // changes from a choice, shown on the next node
 
   const $ = (id) => document.getElementById(id);
+  const list = (v) => (v === undefined ? [] : Array.isArray(v) ? v : [v]);
+  const clone = (obj) => JSON.parse(JSON.stringify(obj));
 
   // ---------- Registration ----------
 
@@ -29,9 +33,7 @@ const Game = (() => {
     Object.assign(characters, map);
   }
 
-  function topFloor() {
-    return Math.max(...Object.keys(floors).map(Number));
-  }
+  const topFloor = () => Math.max(...Object.keys(floors).map(Number));
 
   // ---------- State ----------
 
@@ -39,14 +41,16 @@ const Game = (() => {
     return {
       floor: topFloor(),
       node: null,
-      health: MAX_STAT,
-      sanity: MAX_STAT,
       inventory: [],
       flags: {},
+      met: [],       // characters the player knows
+      dead: [],      // characters who have died
+      bios: {},      // dossier entries rewritten during the story
+      phone: [],     // text messages: { from, text, read }
+      onStage: [],   // portraits currently shown
+      visited: [],   // floors reached so far
     };
   }
-
-  const clone = (obj) => JSON.parse(JSON.stringify(obj));
 
   function save() {
     try { localStorage.setItem(SAVE_KEY, JSON.stringify({ state, checkpoint })); } catch (e) { /* storage unavailable */ }
@@ -54,10 +58,8 @@ const Game = (() => {
 
   function load() {
     try {
-      const raw = localStorage.getItem(SAVE_KEY);
-      if (!raw) return false;
-      const data = JSON.parse(raw);
-      if (!data.state || !floors[data.state.floor]) return false;
+      const data = JSON.parse(localStorage.getItem(SAVE_KEY));
+      if (!data || !data.state || !floors[data.state.floor]) return false;
       state = data.state;
       checkpoint = data.checkpoint || clone(state);
       return true;
@@ -71,37 +73,28 @@ const Game = (() => {
   }
 
   const has = (item) => state.inventory.includes(item);
+  const alive = (id) => !state.dead.includes(id);
 
   // ---------- Conditions & effects ----------
 
-  // Returns true if every condition in `req` is met.
   function meets(req) {
     if (!req) return true;
-    const list = (v) => (v === undefined ? [] : Array.isArray(v) ? v : [v]);
     if (!list(req.item).every(has)) return false;
     if (list(req.notItem).some(has)) return false;
     if (!list(req.flag).every((f) => state.flags[f])) return false;
     if (list(req.notFlag).some((f) => state.flags[f])) return false;
-    if (req.minSanity !== undefined && state.sanity < req.minSanity) return false;
-    if (req.maxSanity !== undefined && state.sanity > req.maxSanity) return false;
-    if (req.minHealth !== undefined && state.health < req.minHealth) return false;
+    if (!list(req.alive).every(alive)) return false;
+    if (list(req.dead).some(alive)) return false;
+    if (req.deaths !== undefined && state.dead.length < req.deaths) return false;
+    if (req.anyFlag && !list(req.anyFlag).some((f) => state.flags[f])) return false;
     return true;
   }
 
-  // Applies effects and returns a list of visible changes to show the player.
+  // Applies effects and returns the visible changes to show the player.
   function apply(fx) {
     const changes = [];
     if (!fx) return changes;
-    const list = (v) => (v === undefined ? [] : Array.isArray(v) ? v : [v]);
 
-    for (const stat of ["health", "sanity"]) {
-      if (fx[stat]) {
-        const before = state[stat];
-        state[stat] = Math.max(0, Math.min(MAX_STAT, state[stat] + fx[stat]));
-        const diff = state[stat] - before;
-        if (diff) changes.push({ text: `${diff > 0 ? "+" : ""}${diff} ${stat}`, good: diff > 0 });
-      }
-    }
     for (const item of list(fx.give)) {
       if (!has(item)) {
         state.inventory.push(item);
@@ -116,18 +109,35 @@ const Game = (() => {
     }
     for (const f of list(fx.set)) state.flags[f] = true;
     for (const f of list(fx.unset)) delete state.flags[f];
+    for (const id of list(fx.meet)) {
+      if (!state.met.includes(id)) {
+        state.met.push(id);
+        changes.push({ text: `Dossier: ${characters[id] ? characters[id].name : id}`, good: true });
+      }
+    }
+    for (const [id, text] of Object.entries(fx.bio || {})) {
+      state.bios[id] = text;
+      changes.push({ text: `Dossier updated: ${characters[id] ? characters[id].name : id}`, good: true });
+    }
+    for (const sms of list(fx.sms)) {
+      state.phone.push({ from: sms.from, text: sms.text, read: false });
+      changes.push({ text: `📱 ${characters[sms.from] ? characters[sms.from].name : sms.from}`, good: true });
+    }
+    for (const id of list(fx.kill)) {
+      if (alive(id)) {
+        state.dead.push(id);
+        changes.push({ text: `${characters[id] ? characters[id].name : id} died`, good: false });
+      }
+    }
     return changes;
   }
 
   // ---------- Flow ----------
 
   function start(useSave = true) {
-    if (!(useSave && load())) {
-      state = freshState();
-      enterFloor(state.floor);
-    } else {
-      goTo(state.node, { skipEffects: true });
-    }
+    if (useSave && load()) return goTo(state.node, { skipEffects: true });
+    state = freshState();
+    enterFloor(state.floor);
   }
 
   function restart() {
@@ -140,12 +150,19 @@ const Game = (() => {
     goTo(floors[state.floor].start);
   }
 
+  // Arrive on a floor by elevator (or at the start of the game).
   function enterFloor(number) {
     const floor = floors[number];
     if (!floor) return showScreen(toBeContinued(number));
+    const firstVisit = !state.visited.includes(number);
     state.floor = number;
-    checkpoint = clone(state);
-    goTo(floor.start);
+    if (firstVisit) {
+      state.visited.push(number);
+      checkpoint = clone(state);
+      goTo(floor.start);
+    } else {
+      goTo(floor.hub || floor.start);
+    }
   }
 
   function goTo(nodeId, opts = {}) {
@@ -156,11 +173,9 @@ const Game = (() => {
       return;
     }
     state.node = nodeId;
+    if (node.show) state.onStage = list(node.show);
 
     const changes = opts.skipEffects ? [] : apply(node.effects);
-
-    if (state.health <= 0) return showScreen(deathScreen(node.deathText || "Your body gives out. The building keeps you."));
-    if (state.sanity <= 0) return showScreen(deathScreen(node.madnessText || "You stop looking for the stairs. You sit down in the hallway, and you listen to the walls, and after a while they start to make sense."));
 
     if (node.death) return showScreen(deathScreen(node.death));
     if (node.ending) { clearSave(); return showScreen(endingScreen(node.ending)); }
@@ -170,26 +185,28 @@ const Game = (() => {
   }
 
   function choose(choice) {
-    const changes = apply(choice.effects);
-    if (choice.descend) return descend();
-    if (state.health <= 0 || state.sanity <= 0) return goTo(state.node, { skipEffects: true });
-    // Show stat changes from the choice on the next node too.
-    pendingChanges = changes;
+    pendingChanges = apply(choice.effects);
+    if (choice.floor !== undefined) return enterFloor(choice.floor);
     goTo(choice.next);
   }
 
-  function descend() {
-    enterFloor(state.floor - 1);
-  }
-
-  let pendingChanges = [];
+  // The rule of a floor is met when its `requires` conditions are true.
+  const ruleMet = (floor) => !floor.rule || meets(floor.rule.requires);
 
   // ---------- Rendering ----------
 
-  function updateHud() {
+  function renderHud(floor) {
     $("floor-num").textContent = state.floor;
-    $("health-bar").style.width = `${state.health}%`;
-    $("sanity-bar").style.width = `${state.sanity}%`;
+    $("floor-theme").textContent = floor ? floor.title : "";
+    $("stage").style.background = (floor && floor.background) || "";
+    renderPhoneBadge();
+  }
+
+  function renderPhoneBadge() {
+    const unread = (state.phone || []).filter((m) => !m.read).length;
+    const badge = $("phone-badge");
+    badge.textContent = unread;
+    badge.hidden = unread === 0;
   }
 
   function renderInventory(newItems = []) {
@@ -203,28 +220,55 @@ const Game = (() => {
     }
   }
 
+  function portraitEl(id, extraClass = "") {
+    const who = characters[id] || { name: id };
+    const el = document.createElement("div");
+    el.className = `portrait ${extraClass}`;
+    el.style.setProperty("--c", who.color || "#888");
+    if (who.image) {
+      const img = document.createElement("img");
+      img.src = who.image;
+      img.alt = who.name;
+      el.appendChild(img);
+    } else {
+      el.innerHTML = `<div class="head"><span class="initial">${who.name.charAt(0)}</span></div><div class="body"></div>`;
+      if (who.hat) el.classList.add("hat");
+    }
+    if (!alive(id)) el.classList.add("dead");
+    return el;
+  }
+
+  function renderPortraits(speaker) {
+    const box = $("portraits");
+    box.innerHTML = "";
+    for (const id of state.onStage) {
+      const cls = speaker ? (id === speaker ? "speaking" : "dim") : "";
+      box.appendChild(portraitEl(id, cls));
+    }
+  }
+
   function render(floor, node, changes) {
     changes = [...pendingChanges, ...changes];
     pendingChanges = [];
 
-    updateHud();
+    renderHud(floor);
     renderInventory(changes.filter((c) => c.item).map((c) => c.item));
-
-    $("floor-title").textContent = `Floor ${floor.number} — ${floor.title}`;
+    renderPortraits(node.speaker);
 
     const who = node.speaker ? characters[node.speaker] || { name: node.speaker } : null;
-    const speakerEl = $("speaker");
-    speakerEl.textContent = who ? who.name : "";
-    speakerEl.style.color = who && who.color ? who.color : "";
+    const nameEl = $("speaker");
+    nameEl.textContent = who ? who.name : "";
+    nameEl.style.display = who ? "" : "none";
+    nameEl.style.setProperty("--c", who && who.color ? who.color : "#888");
 
     const textEl = $("text");
     textEl.className = who ? "" : "narration";
 
     if (changes.some((c) => !c.good && !c.item)) {
-      const scene = $("scene");
-      scene.classList.remove("shake");
-      void scene.offsetWidth; // restart animation
-      scene.classList.add("shake");
+      const stage = $("stage");
+      stage.classList.remove("shake");
+      void stage.offsetWidth; // restart the animation
+      stage.classList.add("shake");
     }
 
     $("choices").innerHTML = "";
@@ -235,43 +279,48 @@ const Game = (() => {
         tag.textContent = c.text;
         textEl.appendChild(tag);
       }
-      renderChoices(node);
+      renderChoices(floor, node);
     });
   }
 
-  function renderChoices(node) {
+  function optionsFor(floor, node) {
+    let options = [];
+    if (node.choices) options = node.choices.filter((c) => meets(c.requires) || c.lockedText);
+    else if (node.next) options = [{ text: "Continue", next: node.next }];
+
+    if (node.elevator) {
+      const met = ruleMet(floor);
+      options.push({
+        text: "Take the elevator down.",
+        lockedText: `Elevator down — locked until the rule is met.`,
+        floor: state.floor - 1,
+        locked: !met,
+        elevator: true,
+      });
+      if (floors[state.floor + 1] && state.visited.includes(state.floor + 1)) {
+        options.push({ text: `Take the elevator back up to floor ${state.floor + 1}.`, floor: state.floor + 1, elevator: true });
+      }
+    }
+    return options;
+  }
+
+  function renderChoices(floor, node) {
     const box = $("choices");
     box.innerHTML = "";
-
-    let options;
-    if (node.choices) {
-      options = node.choices.filter((c) => meets(c.requires) || c.lockedText);
-    } else if (node.descend) {
-      options = [{ text: node.descendText || "Take the stairs down.", descend: true }];
-    } else if (node.next) {
-      options = [{ text: "Continue", next: node.next }];
-    } else {
-      options = [];
-    }
-
-    options.forEach((choice, i) => {
-      const unlocked = meets(choice.requires);
+    optionsFor(floor, node).forEach((choice, i) => {
+      const unlocked = !choice.locked && meets(choice.requires);
       const btn = document.createElement("button");
-      btn.className = "choice";
-      btn.innerHTML = `<span class="key">${i + 1}.</span>`;
+      btn.className = "choice" + (choice.elevator ? " elevator" : "");
+      btn.innerHTML = `<span class="key">${i + 1}</span>`;
       btn.appendChild(document.createTextNode(unlocked ? choice.text : choice.lockedText));
       if (unlocked && choice.requires && choice.requires.item) {
         const tag = document.createElement("span");
         tag.className = "tag";
-        tag.textContent = `[${[].concat(choice.requires.item).join(", ")}]`;
+        tag.textContent = `[${list(choice.requires.item).join(", ")}]`;
         btn.appendChild(tag);
       }
-      if (!unlocked) {
-        btn.disabled = true;
-        btn.style.opacity = 0.45;
-        btn.style.cursor = "not-allowed";
-      }
-      btn.addEventListener("click", () => choose(choice));
+      if (!unlocked) btn.disabled = true;
+      else btn.addEventListener("click", () => choose(choice));
       box.appendChild(btn);
     });
   }
@@ -299,22 +348,22 @@ const Game = (() => {
   }
 
   function showScreen(screen) {
-    updateHud();
+    renderHud(floors[state.floor]);
     renderInventory();
-    $("floor-title").textContent = screen.title;
-    $("speaker").textContent = "";
+    state.onStage = [];
+    renderPortraits(null);
+    $("speaker").style.display = "none";
     const textEl = $("text");
     textEl.className = "narration";
     $("choices").innerHTML = "";
-    typeText(textEl, screen.text, () => {
-      const box = $("choices");
+    typeText(textEl, `${screen.title.toUpperCase()}\n\n${screen.text}`, () => {
       screen.buttons.forEach(([label, fn], i) => {
         const btn = document.createElement("button");
         btn.className = "choice";
-        btn.innerHTML = `<span class="key">${i + 1}.</span>`;
+        btn.innerHTML = `<span class="key">${i + 1}</span>`;
         btn.appendChild(document.createTextNode(label));
         btn.addEventListener("click", fn);
-        box.appendChild(btn);
+        $("choices").appendChild(btn);
       });
     });
   }
@@ -322,7 +371,7 @@ const Game = (() => {
   function deathScreen(text) {
     clearSave();
     return {
-      title: `Died on floor ${state.floor}`,
+      title: `You died on floor ${state.floor}`,
       text,
       buttons: [
         [`Retry floor ${state.floor}`, retryFloor],
@@ -332,19 +381,82 @@ const Game = (() => {
   }
 
   function endingScreen(text) {
-    return { title: "Outside", text, buttons: [["Play again", restart]] };
+    return { title: "The End", text, buttons: [["Play again", restart]] };
   }
 
   function toBeContinued(number) {
+    state.floor = number;
     return {
       title: `Floor ${number}`,
-      text: "The stairwell keeps going down, but this floor hasn't been written yet.\n\nTo be continued.",
+      text: "The elevator doors open on a floor that hasn't been written yet.\n\nTo be continued.",
       buttons: [["Start over from the top", restart]],
     };
   }
 
-  // Keyboard: number keys pick a choice, space/enter skips the typewriter.
+  // ---------- Side panels ----------
+
+  function openPanel(title, html) {
+    $("panel-title").textContent = title;
+    $("panel-body").innerHTML = html;
+    $("panel").hidden = false;
+  }
+
+  function closePanel() {
+    $("panel").hidden = true;
+  }
+
+  const escape = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+
+  function showRules() {
+    const rows = [...state.visited]
+      .sort((a, b) => b - a)
+      .map((n) => floors[n])
+      .filter((f) => f && f.rule)
+      .map((f) => `
+        <div class="rule ${ruleMet(f) ? "met" : ""}">
+          <div class="rule-head">Floor ${f.number} — ${escape(f.title)} <span>${ruleMet(f) ? "✓ met" : "not met"}</span></div>
+          <div class="rule-text">${escape(f.rule.text)}</div>
+        </div>`);
+    openPanel("Rules", rows.join("") || "<p>No rules yet.</p>");
+  }
+
+  function showCast() {
+    const rows = state.met.map((id) => {
+      const who = characters[id] || { name: id };
+      const tmp = document.createElement("div");
+      tmp.appendChild(portraitEl(id, "small"));
+      return `
+        <div class="cast ${alive(id) ? "" : "is-dead"}">
+          ${tmp.innerHTML}
+          <div>
+            <div class="cast-name" style="color:${who.color || "inherit"}">${escape(who.name)}${alive(id) ? "" : " <small>(dead)</small>"}</div>
+            <div class="cast-bio">${escape(state.bios[id] || who.bio || "???")}</div>
+          </div>
+        </div>`;
+    });
+    openPanel("Dossier", rows.join("") || "<p>You don't know anyone yet.</p>");
+  }
+
+  function showPhone() {
+    const msgs = state.phone || [];
+    const html = msgs.map((m) => {
+      const who = characters[m.from] || { name: m.from };
+      return `
+        <div class="sms ${m.read ? "" : "unread"}">
+          <div class="sms-from" style="color:${who.color || "inherit"}">${escape(who.name)}</div>
+          <div class="sms-text">${escape(m.text)}</div>
+        </div>`;
+    });
+    openPanel("Phone", html.join("") || "<p>No messages.</p>");
+    msgs.forEach((m) => { m.read = true; });
+    renderPhoneBadge();
+    save();
+  }
+
+  // ---------- Input ----------
+
   document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") return closePanel();
     if (typing && (e.key === " " || e.key === "Enter")) {
       e.preventDefault();
       return typing.finish();
@@ -356,5 +468,5 @@ const Game = (() => {
     }
   });
 
-  return { registerFloor, registerCharacters, start, restart };
+  return { registerFloor, registerCharacters, start, restart, showRules, showCast, showPhone, closePanel };
 })();
