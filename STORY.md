@@ -19,11 +19,33 @@ Thema: **don't trust anyone.**
 - Ze **kunnen niet tegen water**. Tekenen: **uitgedroogde, gebarsten lippen**, ze ontwijken water, drinken niet.
 - Er loopt **één alien rond** tussen de gevangenen. Het is een hoogintelligente alien, een soort **omgekeerde detective**: een detective voor de alienkant.
 
+## De kern: een band door trauma
+
+> **De premise van het spel en het verhaal: uit trauma kan je een band creëren.**
+
+- Dat is niet ideaal, maar het is precies het **experiment** waarmee de mensen achter het spel verder willen gaan.
+- Het trauma zorgt ervoor dat de **twee hoofdpersonages** (de jongen en het meisje) aan elkaar gaan hangen en een band opbouwen.
+- Door die band kunnen ze **brainwashing tegen elkaar weerstaan**. Ze zijn er altijd voor elkaar, als een vaststaand gegeven.
+- **Tussen die twee komt er nooit verraad.** (Rond hen geldt wel: don't trust anyone.)
+
 ## Het grote plan
 
 - In totaal zitten er **12 mensen** in het gebouw. **Maar twee overleven: de jongen en het meisje**, de twee erfgenamen.
 - De aliens kunnen mensen controleren, en ze willen de emoties van die twee zo hoog mogelijk opdrijven. Het doel: dat de twee elkaar **nooit verraden** en sterk samen komen te staan, via een **traumaband** (een band die door gedeelde trauma ontstaat).
 - Het hele spel is dus eigenlijk een experiment om die band te smeden.
+
+## Teams
+
+- De 12 mensen zitten in **6 teams van 2**.
+- **Beide personen van een team moeten overleven**, anders kan het team niet verder.
+- **Het eerste koppel sterft al meteen in het begin.** Daarbij hoort **de experimenter**: de persoon die alles in gang zet, iemand van "die partij". *(Nog uit te zoeken: van welke partij precies, en waarom die zelf sterft.)*
+- Er zijn ook **een paar mensen die alles in het oog houden.** *(Wie? De Handlers, of nog anderen?)*
+
+## Het begin: de families
+
+- Helemaal aan het begin plegen **twee mensen zelfmoord**: dat is **de familie** van de jongen en van het meisje (de ouders, of eigenlijk de hele familie).
+- De jongen en het meisje krijgen dat **elk apart te zien, op hun eigen kamer**.
+- Ze weten niet waarom. De reden is dat **zij de erfgenamen van beide landen** zijn. Dat komt later in het verhaal aan bod.
 
 ## Het spel in het gebouw
 
@@ -46,16 +68,17 @@ Thema: **don't trust anyone.**
 - Iedereen wordt wakker met een **telefoon** (✅ zit in het spel: knop **Phone**).
 - Via de telefoon komen **berichten en regels** van THE GAME.
 - Elke speler heeft ook contact met **één persoon "buiten"**. Maar die persoon zit eigenlijk **ook opgesloten in het gebouw, op een lagere verdieping**, apart van de anderen. Dat ontdekken ze pas als ze op die verdieping aankomen.
+- In de gsm van de speler staat **een nummer dat pas later in het spel belangrijk wordt**.
 - In het spel heet het contact van de speler voorlopig **Sam** *(placeholder)*. Sam hoort een liftje langs de muur gaan, het liftje van de Handlers. Dat is een aanwijzing dat Sam naast de STAFF-schacht zit.
 
 ## De 12: rollen
 
 | Rol | Aantal | Wie (voorstel) |
 | --- | --- | --- |
-| Erfgenamen (jongen + meisje), de enige overlevenden | 2 | Elias + Noor? |
+| Erfgenamen (jongen + meisje), de enige overlevenden. Een van hen is de speler. | 2 | de speler + Elias of Noor? |
 | Verzet (een man en een vrouw) | 2 | nog te bepalen |
 | Door een alien overgenomen persoon | 1 | Odile? |
-| De persoon die het experiment heeft opgezet | 1 | nog te bepalen (Mira? Jun?) |
+| De experimenter, die alles in gang zet en **in het eerste koppel meteen sterft** | 1 | nog te bepalen |
 | Anderen | 6 | Bram, Tess, … |
 | **Totaal** | **12** | |
 
@@ -67,7 +90,7 @@ Thema: **don't trust anyone.**
 
 | Personage | Aan de oppervlakte | Geheim / ideeën |
 | --- | --- | --- |
-| **Jij** | Wordt als laatste wakker. | Nog open: wie ben jij? |
+| **Jij** | Wordt als laatste wakker. | **Een van de twee erfgenamen.** Overleeft altijd en is nooit in gevaar. Kan met iedereen praten. |
 | **Mira** | Verpleegster, kalm, checkt iedereen. | Merkt als eerste de uitgedroogde lippen op. |
 | **Bram** | Grote bouwvakker, wil alles kapotslaan. | |
 | **Odile** | Oude vrouw, breit, draagt een **grote hoed**. Droge lippen. | Hoofdverdachte voor de alien. *Bewust misschien té verdacht, kan ook een red herring zijn.* |
@@ -96,11 +119,40 @@ Thema: **don't trust anyone.**
 - Tv-uitzending: zuidelijk eiland stil, erfgenamen vermist, verdrag op 19 april.
 - Spiegel in 10D: *TWO OF YOU ARE WORTH MORE THAN ALL THE REST.*
 
+## De speler
+
+- **De speler is een van de twee erfgenamen.** Die twee blijven in leven: **je bent nooit in gevaar.**
+- Je kan **met iedereen praten**.
+- **De gameplay ligt nog niet vast.**
+
+## Verschil met wat er nu in het spel zit
+
+> Alleen genoteerd, nog niet aangepast in de code.
+
+- Nu ben je een gewone gevangene en zijn **Elias en Noor** allebei verdachten voor de erfgenamen. Volgens het nieuwe plan ben **jij** een van de twee.
+- Het spel heeft nog **game-over-schermen** voor als de speler sterft. Volgens het nieuwe plan is de speler nooit in gevaar.
+- Er zijn nog **geen teams van 2**.
+- De **zelfmoordscène van de families** zit er nog niet in. Verdieping 10 begint nu met wakker worden bij Mira.
+- Er sterft nog **geen eerste koppel**, en de **experimenter** zit er nog niet in.
+
 ## Open vragen
 
-- **Wie is de speler?** Als alleen de jongen en het meisje overleven, moet de speler dan een van hen zijn? Of sterft de speler, of wissel je van personage (zoals in *Zero Escape*)?
+- Zie je de zelfmoord van je familie live op een scherm, op een opname, of via de telefoon? En weten jij en de andere erfgenaam van elkaar dat ze hetzelfde zagen?
+- Wie is de andere erfgenaam: Elias of Noor (afhankelijk van of de speler een jongen of een meisje is)? Of kan je dat kiezen?
+- Hoe worden de teams gevormd? Kiezen de spelers zelf, of beslist het spel?
+- Waarom sterft de experimenter zelf meteen? Met opzet, of loopt het mis?
+- Wie zijn "de paar mensen die alles in het oog houden"?
+- Welk nummer staat er in de gsm, en wanneer wordt het belangrijk?
 - Zijn de twee verzetsleden dezelfde mensen als de Handlers, of andere?
 - Wie heeft iedereen ontvoerd: de aliens, een groep die het verdrag wil tegenhouden, of iemand anders?
 - Wat is het doel van de alien in het gebouw: de erfgenamen vinden, ze overnemen, ze doden?
 - Wat gebeurt er op de begane grond?
 - Taal van het spel: nu Engels. Nederlands kan ook.
+
+## Ideeënlog
+
+- **Ronde 1:** escape-from-the-building, elke keer een verdieping lager.
+- **Ronde 2:** death game zoals *Your Turn to Die*. Aliens in het zuiden, twee erfgenamen, Handlers in leer, een quota per verdieping, de lift altijd terug naar boven.
+- **Ronde 3:** don't trust anyone. Een alien met een hoed en droge lippen, de "omgekeerde detective". De Handlers zijn verzetsleden.
+- **Ronde 4:** 12 mensen, alleen de jongen en het meisje overleven, een traumaband. Telefoons met regels en één contact dat lager in het gebouw zit. Rollen: 2 van het verzet, 1 alien, 1 experimenter.
+- **Ronde 5:** de kern is "band door trauma" als experiment, en daardoor kunnen ze brainwashing weerstaan. Geen verraad tussen de twee. Een zelfmoordscène van de families aan het begin, apart op hun kamers. 6 teams van 2, en beide moeten overleven. Het eerste koppel (met de experimenter) sterft meteen. Een paar mensen houden alles in het oog. De speler is nooit in gevaar en kan met iedereen praten. De gameplay ligt nog niet vast. Een nummer in de gsm is voor later. *(Het bericht werd afgebroken na "maar dus, je moet wel interessant…")*
