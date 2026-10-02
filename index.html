@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Way Down</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div id="app">
+    <header id="hud">
+      <div id="floor-badge"><span id="floor-num">12</span><small>F</small></div>
+      <div id="stats">
+        <div class="stat">
+          <label>Health</label>
+          <div class="bar"><div id="health-bar" class="fill health"></div></div>
+        </div>
+        <div class="stat">
+          <label>Sanity</label>
+          <div class="bar"><div id="sanity-bar" class="fill sanity"></div></div>
+        </div>
+      </div>
+      <button id="menu-btn" title="Restart">⟲</button>
+    </header>
+
+    <div id="inventory"></div>
+
+    <main id="scene">
+      <div id="floor-title"></div>
+      <div id="speaker"></div>
+      <div id="text"></div>
+      <div id="choices"></div>
+    </main>
+  </div>
+
+  <!-- Engine first, then each floor registers itself. Add new floors here. -->
+  <script src="js/engine.js"></script>
+  <script src="js/floors/floor12.js"></script>
+  <script src="js/floors/floor11.js"></script>
+  <script src="js/floors/floor10.js"></script>
+  <script src="js/main.js"></script>
+</body>
+</html>
