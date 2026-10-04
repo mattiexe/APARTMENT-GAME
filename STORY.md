@@ -4,6 +4,32 @@ Genre: **death game / mystery visual novel** (zoals *Your Turn to Die*, *Danganr
 Thema: **don't trust anyone.**
 
 > Dit is een werkdocument. Alles wat met *(placeholder)* gemarkeerd staat mag je veranderen.
+> **Behalve de kernpremisse hieronder: die ligt vast.**
+
+## 🔒 Core premise (locked)
+
+> Every other idea in this document (the aliens, the floors, the teams, the characters) has to serve this.
+> If a new idea contradicts it, the idea changes, not the premise.
+
+1. **A bond can be formed out of mutual trauma (shared PTSD).**
+2. **That is the experiment.** The people behind the game deliberately put the two heirs (the boy and the girl) through shared trauma to forge that bond. It isn't healthy or "good", and the story knows that.
+3. **The bond breaks brainwashing.** When one of them is brainwashed or controlled, the shared trauma triggers and undoes it. The memory they share pulls them back to themselves, and back to each other.
+4. **The two never betray each other.** This is a fixed rule of the story. Everyone around them can lie, but between those two there's no betrayal.
+5. **They both survive.** The player is one of them and is never in real danger. The tension comes from what happens to everyone else, and from what's done to the two of them.
+
+### How the trigger could work *(ideas, not locked)*
+
+- **An anchor:** something tied to the shared trauma, like a word, a sound, an object, or the other person's face or voice. It cuts through the brainwashing the way a smell can drag you back into an old memory.
+- **The opening scene as the first shared trauma:** each of them watches their family die alone in their room. Later they find out the other one saw the same thing. That discovery is the first click of the bond.
+- **Each floor adds a layer:** every death they live through together strengthens the bond. The floors are really training.
+- **The climax:** one of them is brainwashed (by the alien?) and turns on the other. The other has to reach them through the shared trauma instead of fighting them.
+
+### Reality check: the psychology *(for your own research)*
+
+- **Shared hardship really does bond people.** Research on soldiers, revolutionaries and disaster survivors finds that going through painful experiences together can create a family-like bond. One term to search is **"identity fusion"** (Harvey Whitehouse's work, for example on Libyan revolutionaries).
+- **"Trauma bonding" is a real term, but it means something else.** In psychology it usually means the bond between an abuser and a victim (Dutton & Painter). What your game describes is closer to **bonding between survivors of shared trauma**. Good to know so you don't get confused while searching.
+- **Brainwashing** is studied as **"coercive persuasion"** or **"thought reform"** (Robert Lifton). Whether it works the way movies show is disputed.
+- **Trauma breaking brainwashing like a switch is fiction.** Real trauma triggers (flashbacks) and emotional memory are real, so the idea *feels* believable, but there's no evidence it works like an off-switch. That's fine: *The Manchurian Candidate*, the Winter Soldier in Marvel and *Zero Escape* do similar things. Ground it in real details (flashbacks, sensory triggers) and stretch the rest.
 
 ## De wereld
 
@@ -137,6 +163,7 @@ Thema: **don't trust anyone.**
 
 ## Open vragen
 
+- **Wie wil de band eigenlijk, en waarom?** Eerder stond er: de aliens willen de emoties van de twee opdrijven. Volgens de vaste premisse beschermt de band hen juist tegen brainwashing. Een logische lezing: de **mensen** achter het experiment willen de toekomstige leiders van het verenigde land **immuun maken voor alienbeheersing**. Of de aliens willen de band juist voor zichzelf gebruiken. Dit moet je kiezen.
 - Zie je de zelfmoord van je familie live op een scherm, op een opname, of via de telefoon? En weten jij en de andere erfgenaam van elkaar dat ze hetzelfde zagen?
 - Wie is de andere erfgenaam: Elias of Noor (afhankelijk van of de speler een jongen of een meisje is)? Of kan je dat kiezen?
 - Hoe worden de teams gevormd? Kiezen de spelers zelf, of beslist het spel?
@@ -156,3 +183,4 @@ Thema: **don't trust anyone.**
 - **Ronde 3:** don't trust anyone. Een alien met een hoed en droge lippen, de "omgekeerde detective". De Handlers zijn verzetsleden.
 - **Ronde 4:** 12 mensen, alleen de jongen en het meisje overleven, een traumaband. Telefoons met regels en één contact dat lager in het gebouw zit. Rollen: 2 van het verzet, 1 alien, 1 experimenter.
 - **Ronde 5:** de kern is "band door trauma" als experiment, en daardoor kunnen ze brainwashing weerstaan. Geen verraad tussen de twee. Een zelfmoordscène van de families aan het begin, apart op hun kamers. 6 teams van 2, en beide moeten overleven. Het eerste koppel (met de experimenter) sterft meteen. Een paar mensen houden alles in het oog. De speler is nooit in gevaar en kan met iedereen praten. De gameplay ligt nog niet vast. Een nummer in de gsm is voor later. *(Het bericht werd afgebroken na "maar dus, je moet wel interessant…")*
+- **Ronde 6 (vastgelegd als kernpremisse):** een band uit gedeelde trauma (PTSD). Wordt een van de twee gebrainwasht, dan triggert die gedeelde trauma en maakt de brainwashing ongedaan. Je zoekt zelf nog uit hoe realistisch dat psychologisch is.
