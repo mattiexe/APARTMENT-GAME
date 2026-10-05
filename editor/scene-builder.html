@@ -85,10 +85,24 @@ input[type="color"] { width: 44px; height: 34px; padding: 2px; border: 1px solid
 h2 { font-family: var(--font-display); font-weight: 600; font-size: 20px; letter-spacing: .6px; text-transform: uppercase; margin: 0; }
 
 /* ---------- Conversations tab ---------- */
-.convo { display: grid; grid-template-columns: 240px minmax(0, 1fr); gap: 16px; align-items: start; }
-.side { display: grid; gap: 8px; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 12px; }
+.convo { display: grid; grid-template-columns: 290px minmax(0, 1fr); gap: 16px; align-items: start; }
+.side { display: grid; grid-template-columns: minmax(0, 1fr); gap: 8px; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 12px; }
 .side-head { display: flex; justify-content: space-between; align-items: center; }
-.conv-list { display: grid; gap: 2px; }
+.side, .chapters, .chapter, .chap-head { min-width: 0; }
+.chapters { display: grid; grid-template-columns: minmax(0, 1fr); gap: 6px; }
+.chapter { display: grid; grid-template-columns: minmax(0, 1fr); gap: 2px; }
+.chap-head { display: flex; align-items: center; gap: 4px; }
+.chap-head input[type="text"] { flex: 1; min-width: 0; }
+.chap-toggle { flex: 1; min-width: 0; text-align: left; border: 0; background: none; padding: 6px 4px; border-radius: 6px; display: flex; align-items: center; gap: 6px; font-weight: 600; font-size: 15px; }
+.chap-toggle:hover { background: var(--sunk); }
+.chap-toggle .caret { color: var(--muted); font-size: 11px; width: 12px; transition: transform .15s; }
+.chap-toggle[aria-expanded="false"] .caret { transform: rotate(-90deg); }
+.chap-toggle .name { min-width: 0; overflow-wrap: anywhere; line-height: 1.25; }
+.chap-toggle small { margin-left: auto; color: var(--muted); font-family: var(--font-mono); font-size: 12px; font-weight: 500; }
+.chap-head input[type="text"] { padding: 5px 8px; font-size: 14px; }
+.chap-head .btn.icon { padding: 3px 7px; }
+.conv-list { display: grid; gap: 2px; padding-left: 18px; border-left: 1px solid var(--line); margin-left: 9px; }
+.conv-list .hint { margin: 4px 0; font-size: 13px; }
 .conv-item { text-align: left; border: 0; background: none; padding: 8px 10px; border-radius: 6px; display: flex; justify-content: space-between; gap: 8px; }
 .conv-item:hover { background: var(--sunk); }
 .conv-item[aria-current="true"] { background: var(--sunk); box-shadow: inset 3px 0 0 var(--accent); font-weight: 600; }
@@ -188,12 +202,14 @@ const SAME_BG = "";
 const LOCAL_KEY = "waydown-scene-builder";
 
 const S = {
-  project: { characters: [], backgrounds: [], conversations: [] },
+  project: null,     // filled by normalize() below
   mode: "starting",  // "cloud" (saved with the page), "local" (this browser only)
   db: null, docRef: null, assets: null,
   tab: "conv", convId: null, lineId: null,
   saving: false, savePending: false, saveTimer: null,
   armed: null,       // id of a delete button waiting for confirmation
+  renaming: null,    // id of the chapter whose name is being edited
+  collapsed: {},     // chapter id -> true when folded shut
   play: null,        // { convId, index }
 };
 
@@ -204,6 +220,7 @@ const imgSrc = (ref) => !ref ? "" : ref.startsWith("asset:") ? "/_blob/" + ref.s
 const charById = (id) => S.project.characters.find((c) => c.id === id);
 const bgById = (id) => S.project.backgrounds.find((b) => b.id === id);
 const currentConv = () => S.project.conversations.find((c) => c.id === S.convId);
+const chapterById = (id) => S.project.chapters.find((c) => c.id === id);
 
 // ---------------------------------------------------------------------------
 // Saving: with the page when the viewer allows it, else in this browser
@@ -218,8 +235,18 @@ function readLocal() {
   try { const raw = localStorage.getItem(LOCAL_KEY); return raw ? JSON.parse(raw) : null; } catch (e) { return null; }
 }
 
+function defaultChapters() {
+  // One chapter per floor, top floor first.
+  return Array.from({ length: 7 }, (_, i) => ({ id: "ch" + (i + 1), name: `Chapter ${i + 1}: Floor ${7 - i}` }));
+}
+
 function normalize(p) {
+  const chapters = Array.isArray(p && p.chapters) ? p.chapters : defaultChapters();
+  const conversations = Array.isArray(p && p.conversations) ? p.conversations : [];
+  // Older projects had no chapters: put loose conversations in the first one.
+  if (!(p && Array.isArray(p.chapters)) && chapters[0]) conversations.forEach((c) => { if (!c.chapterId) c.chapterId = chapters[0].id; });
   return {
+    chapters,
     characters: Array.isArray(p && p.characters) ? p.characters : [],
     backgrounds: Array.isArray(p && p.backgrounds) ? p.backgrounds : [],
     conversations: Array.isArray(p && p.conversations) ? p.conversations : [],
@@ -258,7 +285,7 @@ async function save() {
 
 async function start() {
   const local = readLocal();
-  if (local) S.project = normalize(local);
+  S.project = normalize(local || {});
   pickDefaults();
   render();
 
@@ -418,15 +445,36 @@ function delBtn(id, label = "Delete") {
 function convView() {
   const convs = S.project.conversations;
   const conv = currentConv();
-  const list = convs.map((c) => `
+  const item = (c) => `
     <button class="conv-item" data-act="pick-conv" data-id="${esc(c.id)}" aria-current="${c.id === S.convId}">
       <span>${esc(c.name || "Untitled")}</span><small>${c.lines.length}</small>
-    </button>`).join("");
+    </button>`;
 
+  const chapterBlock = (ch) => {
+    const items = convs.filter((c) => c.chapterId === ch.id);
+    const open = !S.collapsed[ch.id];
+    const head = S.renaming === ch.id
+      ? `<input type="text" id="chn-${esc(ch.id)}" data-f="chap-name" data-id="${esc(ch.id)}" value="${esc(ch.name)}" aria-label="Chapter name">
+         <button class="btn icon" data-act="rename-done">Done</button>
+         ${delBtn(ch.id, "✕")}`
+      : `<button class="chap-toggle" data-act="toggle-chap" data-id="${esc(ch.id)}" aria-expanded="${open}">
+           <span class="caret">▼</span><span class="name">${esc(ch.name || "Untitled chapter")}</span><small>${items.length}</small>
+         </button>
+         <button class="btn icon" data-act="rename-chap" data-id="${esc(ch.id)}" title="Rename chapter" aria-label="Rename chapter">✎</button>
+         <button class="btn icon" data-act="add-conv" data-chap="${esc(ch.id)}" title="New conversation in this chapter" aria-label="New conversation in this chapter">+</button>`;
+    return `<div class="chapter"><div class="chap-head">${head}</div>
+      ${open ? `<div class="conv-list">${items.map(item).join("") || `<p class="hint">Empty</p>`}</div>` : ""}
+    </div>`;
+  };
+
+  const loose = convs.filter((c) => !chapterById(c.chapterId));
   const side = `
     <aside class="side">
-      <div class="side-head"><h2>Conversations</h2><button class="btn icon" data-act="add-conv">+ New</button></div>
-      <div class="conv-list">${list || `<p class="hint">No conversations yet.</p>`}</div>
+      <div class="side-head"><h2>Chapters</h2><button class="btn icon" data-act="add-chapter">+ Chapter</button></div>
+      <div class="chapters">
+        ${S.project.chapters.map(chapterBlock).join("")}
+        ${loose.length ? `<div class="chapter"><div class="chap-head"><span class="chap-toggle" style="cursor:default"><span class="name">No chapter</span><small>${loose.length}</small></span></div><div class="conv-list">${loose.map(item).join("")}</div></div>` : ""}
+      </div>
     </aside>`;
 
   if (!conv) {
@@ -462,6 +510,10 @@ function convView() {
     <div class="work">
       <div class="work-head">
         <label class="field">Conversation name<input type="text" id="conv-name" data-f="conv-name" value="${esc(conv.name)}"></label>
+        <label class="field" style="flex:0 1 220px">Chapter<select id="conv-chapter" data-f="conv-chapter">
+          ${S.project.chapters.map((ch) => `<option value="${esc(ch.id)}"${ch.id === conv.chapterId ? " selected" : ""}>${esc(ch.name || "Untitled chapter")}</option>`).join("")}
+          <option value=""${chapterById(conv.chapterId) ? "" : " selected"}>No chapter</option>
+        </select></label>
         <button class="btn primary" data-act="play" ${conv.lines.length ? "" : "disabled"}>▶ Play</button>
         ${delBtn(conv.id, "Delete conversation")}
       </div>
@@ -537,7 +589,12 @@ const COLORS = ["#7fc8a9", "#e0874a", "#c792ea", "#f2c94c", "#6a8fd1", "#e8445a"
 
 function deleteThing(id) {
   const p = S.project;
-  if (p.conversations.some((c) => c.id === id)) {
+  if (p.chapters.some((c) => c.id === id)) {
+    // Keep the conversations; they move to "No chapter".
+    p.chapters = p.chapters.filter((c) => c.id !== id);
+    p.conversations.forEach((c) => { if (c.chapterId === id) c.chapterId = null; });
+    S.renaming = null;
+  } else if (p.conversations.some((c) => c.id === id)) {
     p.conversations = p.conversations.filter((c) => c.id !== id);
     S.convId = null;
   } else if (p.characters.some((c) => c.id === id)) {
@@ -578,8 +635,30 @@ document.addEventListener("click", (e) => {
   switch (act) {
     case "goto": S.tab = btn.dataset.tab; break;
     case "pick-conv": S.convId = btn.dataset.id; S.lineId = null; pickDefaults(); break;
+    case "toggle-chap": S.collapsed[btn.dataset.id] = !S.collapsed[btn.dataset.id]; break;
+    case "rename-chap": {
+      S.renaming = btn.dataset.id;
+      render();
+      const input = document.getElementById("chn-" + S.renaming);
+      if (input) { input.focus(); input.select(); }
+      return;
+    }
+    case "rename-done": S.renaming = null; break;
+    case "add-chapter": {
+      const ch = { id: uid(), name: `Chapter ${p.chapters.length + 1}` };
+      p.chapters.push(ch);
+      changed();
+      S.renaming = ch.id;
+      render();
+      const input = document.getElementById("chn-" + ch.id);
+      if (input) { input.focus(); input.select(); }
+      return;
+    }
     case "add-conv": {
-      const c = { id: uid(), name: `Conversation ${p.conversations.length + 1}`, lines: [] };
+      const chapterId = btn.dataset.chap || (conv && conv.chapterId) || (p.chapters[0] && p.chapters[0].id) || null;
+      if (chapterId) S.collapsed[chapterId] = false;
+      const inChapter = p.conversations.filter((c) => c.chapterId === chapterId).length;
+      const c = { id: uid(), chapterId, name: `Conversation ${inChapter + 1}`, lines: [] };
       p.conversations.push(c);
       S.convId = c.id; S.lineId = null; S.tab = "conv";
       changed(); break;
@@ -648,6 +727,8 @@ document.addEventListener("input", (e) => {
     const item = document.querySelector(`.conv-item[data-id="${CSS.escape(conv.id)}"] span`);
     if (item) item.textContent = v || "Untitled";
   }
+  else if (f === "conv-chapter" && conv) { conv.chapterId = v || null; if (v) S.collapsed[v] = false; changed(); render(); return; }
+  else if (f === "chap-name") { const ch = chapterById(e.target.dataset.id); if (ch) ch.name = v; }
   else if (f === "char-name" && charCard) charById(charCard.dataset.char).name = v;
   else if (f === "char-color" && charCard) { const c = charById(charCard.dataset.char); c.color = v; const s = charCard.querySelector(".silhouette"); if (s) s.style.setProperty("--c", v); }
   else if (f === "bg-name" && bgCard) bgById(bgCard.dataset.bg).name = v;
@@ -734,6 +815,7 @@ $("#player").addEventListener("click", (e) => {
 });
 
 document.addEventListener("keydown", (e) => {
+  if (S.renaming && (e.key === "Enter" || e.key === "Escape") && e.target.dataset.f === "chap-name") { S.renaming = null; render(); return; }
   if (!S.play) return;
   if (e.key === "Escape") { closePlayer(); return; }
   if ((e.key === " " || e.key === "Enter" || e.key === "ArrowRight") && !S.play.ended) { e.preventDefault(); advance(); }
