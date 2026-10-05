@@ -1,0 +1,743 @@
+<title>Way Down Scene Builder</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Source+Sans+3:wght@400;600&family=JetBrains+Mono:wght@500&display=swap">
+<style>
+/* Layout: a working desk. Tabs on top; the conversation tab is a list on the left,
+   and on the right a live game screen above the script of lines. */
+:root {
+  --bg: #f1eff3;
+  --surface: #ffffff;
+  --sunk: #e7e4ea;
+  --line: #d6d1db;
+  --fg: #1d1a22;
+  --muted: #6b6474;
+  --accent: #c8283f;
+  --accent-fg: #ffffff;
+  --ok: #2f7d4f;
+  --warn: #a8641b;
+  /* The game screen always looks like the game, in either theme. */
+  --stage-bg: #15131a;
+  --stage-box: rgba(14, 13, 19, 0.9);
+  --stage-text: #ece8f0;
+  --stage-muted: #a49fb0;
+  --font-display: "Barlow Condensed", "Arial Narrow", sans-serif;
+  --font-body: "Source Sans 3", "Segoe UI", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #121016; --surface: #1b1820; --sunk: #0d0b10; --line: #2e2a35;
+    --fg: #ece8f0; --muted: #9a93a6; --accent: #e8445a; --accent-fg: #ffffff;
+    --ok: #6fcf97; --warn: #e0a65a; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #121016; --surface: #1b1820; --sunk: #0d0b10; --line: #2e2a35;
+  --fg: #ece8f0; --muted: #9a93a6; --accent: #e8445a; --accent-fg: #ffffff;
+  --ok: #6fcf97; --warn: #e0a65a; color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html, body { height: 100%; }
+body {
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--font-body);
+  font-size: 15px;
+}
+button, input, select, textarea { font: inherit; color: inherit; }
+button { cursor: pointer; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.app { max-width: 1240px; margin: 0 auto; padding: 16px; padding-block: 16px 40px; display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; }
+
+/* ---------- Top bar ---------- */
+.top { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 20px; }
+.brand { font-family: var(--font-display); font-weight: 700; font-size: 26px; letter-spacing: .5px; text-transform: uppercase; line-height: 1; }
+.brand span { color: var(--accent); }
+.tabs { display: flex; gap: 4px; max-width: 100%; overflow-x: auto; background: var(--sunk); padding: 4px; border-radius: 8px; }
+.tab { border: 0; background: none; padding: 7px 14px; border-radius: 6px; font-family: var(--font-display); font-weight: 600; font-size: 16px; letter-spacing: .6px; text-transform: uppercase; color: var(--muted); }
+.tab[aria-selected="true"] { background: var(--surface); color: var(--fg); box-shadow: 0 1px 2px rgba(0,0,0,.12); }
+.status { margin-left: auto; font-size: 13px; color: var(--muted); display: flex; align-items: center; gap: 6px; }
+.status::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--muted); }
+.status.ok::before { background: var(--ok); }
+.status.busy::before { background: var(--warn); }
+.status.err { color: var(--accent); }
+.status.err::before { background: var(--accent); }
+
+/* ---------- Generic controls ---------- */
+.btn { white-space: nowrap; border: 1px solid var(--line); background: var(--surface); padding: 7px 12px; border-radius: 6px; font-weight: 600; font-size: 14px; display: inline-flex; align-items: center; gap: 6px; }
+.btn:hover { border-color: var(--muted); }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-fg); }
+.btn.danger.armed { background: var(--accent); border-color: var(--accent); color: var(--accent-fg); }
+.btn.icon { padding: 5px 8px; font-size: 13px; }
+.btn:disabled { opacity: .4; cursor: default; }
+label.field { display: grid; gap: 4px; font-size: 12px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .6px; }
+input[type="text"], select, textarea {
+  width: 100%; background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 7px 9px; font-size: 15px; text-transform: none; letter-spacing: 0; font-weight: 400;
+}
+textarea { resize: vertical; min-height: 64px; line-height: 1.45; }
+input[type="color"] { width: 44px; height: 34px; padding: 2px; border: 1px solid var(--line); border-radius: 6px; background: var(--surface); }
+.file-btn { position: relative; overflow: hidden; }
+.file-btn input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+.hint { font-size: 13px; color: var(--muted); }
+h2 { font-family: var(--font-display); font-weight: 600; font-size: 20px; letter-spacing: .6px; text-transform: uppercase; margin: 0; }
+
+/* ---------- Conversations tab ---------- */
+.convo { display: grid; grid-template-columns: 240px minmax(0, 1fr); gap: 16px; align-items: start; }
+.side { display: grid; gap: 8px; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 12px; }
+.side-head { display: flex; justify-content: space-between; align-items: center; }
+.conv-list { display: grid; gap: 2px; }
+.conv-item { text-align: left; border: 0; background: none; padding: 8px 10px; border-radius: 6px; display: flex; justify-content: space-between; gap: 8px; }
+.conv-item:hover { background: var(--sunk); }
+.conv-item[aria-current="true"] { background: var(--sunk); box-shadow: inset 3px 0 0 var(--accent); font-weight: 600; }
+.conv-item small { color: var(--muted); font-family: var(--font-mono); font-size: 12px; }
+
+.work { display: grid; gap: 14px; min-width: 0; }
+.work-head { display: flex; flex-wrap: wrap; gap: 10px; align-items: end; }
+.work-head .field { flex: 1 1 220px; }
+
+.lines { display: grid; gap: 8px; }
+.line { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 10px; display: grid; gap: 8px; }
+.line[aria-current="true"] { border-color: var(--accent); }
+.line-head { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.line-num { font-family: var(--font-mono); font-size: 12px; color: var(--muted); min-width: 22px; }
+.line-head select { width: auto; flex: 1 1 140px; padding: 5px 8px; font-size: 14px; }
+.line-tools { display: flex; gap: 4px; margin-left: auto; }
+
+.empty { border: 1px dashed var(--line); border-radius: 10px; padding: 28px; text-align: center; color: var(--muted); display: grid; gap: 10px; justify-items: center; }
+
+/* ---------- The game screen ---------- */
+.stage {
+  position: relative; width: 100%; max-width: 100%; aspect-ratio: 16 / 9; overflow: hidden;
+  background: var(--stage-bg); background-size: cover; background-position: center;
+  border-radius: 8px; color: var(--stage-text); user-select: none;
+}
+.stage .portrait { position: absolute; left: 50%; bottom: 0; transform: translateX(-50%); height: 88%; display: flex; align-items: flex-end; justify-content: center; }
+.stage .portrait img { height: 100%; width: auto; max-width: none; object-fit: contain; }
+.silhouette { --c: #888; height: 100%; aspect-ratio: 1 / 1.6; display: flex; flex-direction: column; align-items: center; }
+.silhouette .head { width: 42%; aspect-ratio: 1; border-radius: 50%; background: var(--c); opacity: .9; display: grid; place-items: center; font-family: var(--font-display); font-weight: 700; color: rgba(0,0,0,.5); font-size: clamp(12px, 3vw, 30px); }
+.silhouette .body { width: 90%; flex: 1; margin-top: 6%; border-radius: 45% 45% 0 0; background: linear-gradient(180deg, var(--c), transparent 95%); opacity: .75; }
+.box {
+  position: absolute; left: 3%; right: 3%; bottom: 4%; min-height: 26%;
+  background: var(--stage-box); border: 1px solid rgba(255,255,255,.08); border-radius: 6px;
+  padding: clamp(14px, 2.6vw, 26px) clamp(12px, 2.4vw, 24px) clamp(10px, 2vw, 18px);
+}
+.nametag {
+  --c: #888; position: absolute; top: 0; left: 18px; transform: translateY(-55%) skewX(-12deg);
+  background: var(--c); color: #0b0a0e; padding: 4px 16px;
+  font-family: var(--font-display); font-weight: 700; letter-spacing: 1px; text-transform: uppercase; font-size: clamp(12px, 1.8vw, 17px);
+}
+.say { font-size: clamp(13px, 2vw, 19px); line-height: 1.5; white-space: pre-wrap; }
+.say.narration { font-style: italic; color: var(--stage-muted); }
+.say.placeholder { color: var(--stage-muted); }
+.stage-label { position: absolute; top: 10px; left: 12px; font-family: var(--font-mono); font-size: 11px; color: var(--stage-muted); background: rgba(0,0,0,.45); padding: 2px 7px; border-radius: 4px; }
+.next-hint { position: absolute; right: 14px; bottom: 10px; font-size: 13px; color: var(--stage-muted); animation: bob 1s ease-in-out infinite alternate; }
+@keyframes bob { from { transform: translateY(0); } to { transform: translateY(-3px); } }
+@media (prefers-reduced-motion: reduce) { .next-hint { animation: none; } }
+
+/* ---------- Cards (characters, backgrounds) ---------- */
+.grid-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 10px; }
+.cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 12px; }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; overflow: hidden; display: grid; }
+.card-art { background: var(--stage-bg); aspect-ratio: 4 / 3; display: flex; justify-content: center; align-items: flex-end; overflow: hidden; background-size: cover; background-position: center; }
+.card-art.wide { aspect-ratio: 16 / 9; }
+.card-art img { height: 92%; width: auto; object-fit: contain; }
+.card-art .silhouette { height: 86%; }
+.card-body { padding: 12px; display: grid; gap: 10px; }
+.row { display: flex; gap: 8px; align-items: end; flex-wrap: wrap; }
+.row > .field { flex: 1 1 120px; }
+
+/* ---------- Player ---------- */
+.player { position: fixed; inset: 0; z-index: 20; background: rgba(5, 4, 8, .92); display: grid; place-items: center; padding: 16px; }
+.player-inner { width: min(1100px, 100%); display: grid; gap: 10px; }
+.player-bar { display: flex; justify-content: space-between; align-items: center; color: #ece8f0; font-family: var(--font-display); letter-spacing: .6px; text-transform: uppercase; }
+.player-bar .btn { background: #1b1820; border-color: #2e2a35; color: #ece8f0; }
+.player .stage { cursor: pointer; }
+.end-card { position: absolute; inset: 0; display: grid; place-content: center; gap: 12px; justify-items: center; background: rgba(0,0,0,.55); font-family: var(--font-display); text-transform: uppercase; letter-spacing: 2px; font-size: 22px; }
+
+@media (max-width: 760px) {
+  .convo { grid-template-columns: 1fr; }
+  .tab { padding: 6px 9px; font-size: 14px; }
+  .brand { font-size: 22px; }
+  .status { margin-left: 0; width: 100%; }
+}
+</style>
+
+<div class="app">
+  <header class="top">
+    <div class="brand">Way Down <span>Scene Builder</span></div>
+    <div class="tabs" role="tablist">
+      <button class="tab" role="tab" data-tab="conv" id="tab-conv">Conversations</button>
+      <button class="tab" role="tab" data-tab="chars" id="tab-chars">Characters</button>
+      <button class="tab" role="tab" data-tab="bgs" id="tab-bgs">Backgrounds</button>
+    </div>
+    <div class="status" id="status">Loading…</div>
+  </header>
+  <main id="view"></main>
+</div>
+<div class="player" id="player" hidden></div>
+
+<script>
+// ---------------------------------------------------------------------------
+// State
+// ---------------------------------------------------------------------------
+const NARRATION = "";
+const SAME_BG = "";
+const LOCAL_KEY = "waydown-scene-builder";
+
+const S = {
+  project: { characters: [], backgrounds: [], conversations: [] },
+  mode: "starting",  // "cloud" (saved with the page), "local" (this browser only)
+  db: null, docRef: null, assets: null,
+  tab: "conv", convId: null, lineId: null,
+  saving: false, savePending: false, saveTimer: null,
+  armed: null,       // id of a delete button waiting for confirmation
+  play: null,        // { convId, index }
+};
+
+const $ = (sel, root = document) => root.querySelector(sel);
+const uid = () => Math.random().toString(36).slice(2, 10);
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const imgSrc = (ref) => !ref ? "" : ref.startsWith("asset:") ? "/_blob/" + ref.slice(6) : ref;
+const charById = (id) => S.project.characters.find((c) => c.id === id);
+const bgById = (id) => S.project.backgrounds.find((b) => b.id === id);
+const currentConv = () => S.project.conversations.find((c) => c.id === S.convId);
+
+// ---------------------------------------------------------------------------
+// Saving: with the page when the viewer allows it, else in this browser
+// ---------------------------------------------------------------------------
+function setStatus(text, kind = "") {
+  const el = $("#status");
+  el.textContent = text;
+  el.className = "status " + kind;
+}
+
+function readLocal() {
+  try { const raw = localStorage.getItem(LOCAL_KEY); return raw ? JSON.parse(raw) : null; } catch (e) { return null; }
+}
+
+function normalize(p) {
+  return {
+    characters: Array.isArray(p && p.characters) ? p.characters : [],
+    backgrounds: Array.isArray(p && p.backgrounds) ? p.backgrounds : [],
+    conversations: Array.isArray(p && p.conversations) ? p.conversations : [],
+  };
+}
+
+function changed() {
+  clearTimeout(S.saveTimer);
+  setStatus("Unsaved changes…", "busy");
+  S.saveTimer = setTimeout(save, 700);
+}
+
+async function save() {
+  if (S.saving) { S.savePending = true; return; }
+  S.saving = true;
+  const data = JSON.parse(JSON.stringify(S.project));
+  try {
+    if (S.mode === "cloud") {
+      setStatus("Saving…", "busy");
+      await S.docRef.set(data);
+      setStatus("All changes saved", "ok");
+    } else {
+      localStorage.setItem(LOCAL_KEY, JSON.stringify(data));
+      setStatus("Saved in this browser only", "ok");
+    }
+  } catch (e) {
+    const code = e && e.code;
+    if (code === "quota_exceeded") setStatus("Storage is full. Remove some images or conversations.", "err");
+    else if (code === "invalid_argument") setStatus("Couldn't save: this project is too big for one save.", "err");
+    else if (S.mode === "local") setStatus("Couldn't save in this browser. Images may be too big.", "err");
+    else setStatus("Couldn't save. Your edits are still here; keep going and it will retry.", "err");
+  }
+  S.saving = false;
+  if (S.savePending) { S.savePending = false; save(); }
+}
+
+async function start() {
+  const local = readLocal();
+  if (local) S.project = normalize(local);
+  pickDefaults();
+  render();
+
+  const claude = window.claude;
+  const db = claude && claude.use ? await claude.use("db").catch(() => null) : null;
+  if (!db) {
+    S.mode = "local";
+    setStatus(local ? "Saved in this browser only" : "Changes save in this browser only", "ok");
+    render();
+    return;
+  }
+  S.db = db;
+  S.docRef = db.doc("project/main");
+  S.assets = await claude.use("assets").catch(() => null);
+  try {
+    const snap = await S.docRef.get();
+    if (snap.exists) {
+      S.project = normalize(snap.data());
+      S.mode = "cloud";
+      setStatus("All changes saved", "ok");
+    } else {
+      S.mode = "cloud";
+      if (local) save(); else setStatus("Ready. Your work saves automatically.", "ok");
+    }
+  } catch (e) {
+    S.mode = "local";
+    setStatus("Couldn't reach saved data; saving in this browser for now", "err");
+  }
+  pickDefaults();
+  render();
+}
+
+function pickDefaults() {
+  const convs = S.project.conversations;
+  if (!convs.find((c) => c.id === S.convId)) S.convId = convs[0] ? convs[0].id : null;
+  const conv = currentConv();
+  if (conv && !conv.lines.find((l) => l.id === S.lineId)) S.lineId = conv.lines[0] ? conv.lines[0].id : null;
+}
+
+// ---------------------------------------------------------------------------
+// Images: shrink, then store with the page (or inline in this browser)
+// ---------------------------------------------------------------------------
+function shrink(file, maxW, maxH, type) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    img.onload = () => {
+      const scale = Math.min(1, maxW / img.width, maxH / img.height);
+      const c = document.createElement("canvas");
+      c.width = Math.round(img.width * scale);
+      c.height = Math.round(img.height * scale);
+      c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
+      URL.revokeObjectURL(url);
+      c.toBlob((b) => (b ? resolve(b) : reject(new Error("encode"))), type, 0.86);
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error("decode")); };
+    img.src = url;
+  });
+}
+
+const blobToDataUrl = (blob) => new Promise((res) => { const r = new FileReader(); r.onload = () => res(r.result); r.readAsDataURL(blob); });
+
+async function storeImage(file, kind) {
+  const isChar = kind === "char";
+  const blob = isChar ? await shrink(file, 900, 1200, "image/png") : await shrink(file, 1600, 900, "image/jpeg");
+  if (S.assets) {
+    const res = await S.assets.upload(blob);
+    return "asset:" + res.id;
+  }
+  // No file storage in this view: keep a smaller copy inside the project.
+  const small = isChar ? await shrink(file, 450, 600, "image/png") : await shrink(file, 960, 540, "image/jpeg");
+  return blobToDataUrl(small);
+}
+
+async function handleUpload(input, target, kind) {
+  const file = input.files && input.files[0];
+  if (!file) return;
+  if (!file.type.startsWith("image/")) { setStatus("That file isn't an image. Use PNG, JPG or WebP.", "err"); return; }
+  setStatus("Uploading image…", "busy");
+  try {
+    target.image = await storeImage(file, kind);
+    changed();
+    render();
+  } catch (e) {
+    const code = e && e.code;
+    setStatus(code === "too_large" ? "That image is too big." : code === "quota_or_state" ? "Image storage is full." : "Couldn't use that image. Try a PNG or JPG.", "err");
+  }
+}
+
+// ---------------------------------------------------------------------------
+// The game screen (used by the preview and by Play)
+// ---------------------------------------------------------------------------
+function bgForLine(conv, index) {
+  for (let i = index; i >= 0; i--) {
+    const b = conv.lines[i] && conv.lines[i].bg;
+    if (b && bgById(b)) return bgById(b);
+  }
+  return S.project.backgrounds[0] || null;
+}
+
+function portraitHtml(ch) {
+  if (!ch) return "";
+  if (ch.image) return `<div class="portrait"><img src="${esc(imgSrc(ch.image))}" alt="${esc(ch.name)}"></div>`;
+  return `<div class="portrait">${silhouette(ch)}</div>`;
+}
+
+function silhouette(ch) {
+  return `<div class="silhouette" style="--c:${esc(ch.color || "#888")}"><div class="head">${esc((ch.name || "?").charAt(0))}</div><div class="body"></div></div>`;
+}
+
+function stageHtml(conv, index, opts = {}) {
+  const line = conv && conv.lines[index];
+  const bg = conv ? bgForLine(conv, index) : null;
+  const ch = line ? charById(line.speaker) : null;
+  const bgStyle = bg ? (bg.image ? `background-image:url('${esc(imgSrc(bg.image))}')` : `background:${esc(bg.color || "#15131a")}`) : "";
+  const text = opts.text !== undefined ? opts.text : (line ? line.text : "");
+  const sayClass = !line ? "say placeholder" : !ch ? "say narration" : "say";
+  return `
+    <div class="stage" style="${bgStyle}">
+      ${opts.label ? `<div class="stage-label">${esc(opts.label)}</div>` : ""}
+      ${portraitHtml(ch)}
+      <div class="box">
+        ${ch ? `<div class="nametag" style="--c:${esc(ch.color || "#888")}">${esc(ch.name || "???")}</div>` : ""}
+        <div class="${sayClass}">${esc(text || (line ? "" : "Add a line below to see it here."))}</div>
+        ${opts.nextHint ? `<div class="next-hint">▼</div>` : ""}
+      </div>
+      ${opts.end || ""}
+    </div>`;
+}
+
+// ---------------------------------------------------------------------------
+// Views
+// ---------------------------------------------------------------------------
+function render() {
+  document.querySelectorAll(".tab").forEach((t) => t.setAttribute("aria-selected", String(t.dataset.tab === S.tab)));
+  const view = $("#view");
+  if (S.tab === "conv") view.innerHTML = convView();
+  else if (S.tab === "chars") view.innerHTML = charsView();
+  else view.innerHTML = bgsView();
+}
+
+function speakerOptions(selected) {
+  return `<option value="${NARRATION}"${!selected ? " selected" : ""}>Narration (no one)</option>` +
+    S.project.characters.map((c) => `<option value="${esc(c.id)}"${c.id === selected ? " selected" : ""}>${esc(c.name || "Unnamed")}</option>`).join("");
+}
+
+function bgOptions(selected, first) {
+  return `<option value="${SAME_BG}"${!selected ? " selected" : ""}>${first ? "Background: default" : "Background: same as before"}</option>` +
+    S.project.backgrounds.map((b) => `<option value="${esc(b.id)}"${b.id === selected ? " selected" : ""}>${esc(b.name || "Unnamed")}</option>`).join("");
+}
+
+function delBtn(id, label = "Delete") {
+  const armed = S.armed === id;
+  return `<button class="btn icon danger${armed ? " armed" : ""}" data-act="del" data-id="${esc(id)}">${armed ? "Click again to delete" : label}</button>`;
+}
+
+function convView() {
+  const convs = S.project.conversations;
+  const conv = currentConv();
+  const list = convs.map((c) => `
+    <button class="conv-item" data-act="pick-conv" data-id="${esc(c.id)}" aria-current="${c.id === S.convId}">
+      <span>${esc(c.name || "Untitled")}</span><small>${c.lines.length}</small>
+    </button>`).join("");
+
+  const side = `
+    <aside class="side">
+      <div class="side-head"><h2>Conversations</h2><button class="btn icon" data-act="add-conv">+ New</button></div>
+      <div class="conv-list">${list || `<p class="hint">No conversations yet.</p>`}</div>
+    </aside>`;
+
+  if (!conv) {
+    return `<section class="convo">${side}
+      <div class="empty">
+        <h2>Start your first conversation</h2>
+        <p>Add a few characters and a background first, then write who says what, line by line.</p>
+        <div class="row">
+          <button class="btn" data-act="goto" data-tab="chars">Add characters</button>
+          <button class="btn primary" data-act="add-conv">New conversation</button>
+        </div>
+      </div></section>`;
+  }
+
+  const idx = Math.max(0, conv.lines.findIndex((l) => l.id === S.lineId));
+  const noChars = S.project.characters.length === 0;
+  const lines = conv.lines.map((l, i) => `
+    <div class="line" data-line="${esc(l.id)}" aria-current="${l.id === S.lineId}">
+      <div class="line-head">
+        <span class="line-num">${String(i + 1).padStart(2, "0")}</span>
+        <select id="sp-${esc(l.id)}" data-f="speaker" aria-label="Who speaks">${speakerOptions(l.speaker)}</select>
+        <select id="bg-${esc(l.id)}" data-f="bg" aria-label="Background">${bgOptions(l.bg, i === 0)}</select>
+        <div class="line-tools">
+          <button class="btn icon" data-act="up" title="Move up" ${i === 0 ? "disabled" : ""}>↑</button>
+          <button class="btn icon" data-act="down" title="Move down" ${i === conv.lines.length - 1 ? "disabled" : ""}>↓</button>
+          ${delBtn(l.id, "✕")}
+        </div>
+      </div>
+      <textarea id="tx-${esc(l.id)}" data-f="text" placeholder="What do they say?">${esc(l.text)}</textarea>
+    </div>`).join("");
+
+  return `<section class="convo">${side}
+    <div class="work">
+      <div class="work-head">
+        <label class="field">Conversation name<input type="text" id="conv-name" data-f="conv-name" value="${esc(conv.name)}"></label>
+        <button class="btn primary" data-act="play" ${conv.lines.length ? "" : "disabled"}>▶ Play</button>
+        ${delBtn(conv.id, "Delete conversation")}
+      </div>
+      <div id="preview">${stageHtml(conv, idx, { label: conv.lines.length ? `Line ${idx + 1} of ${conv.lines.length}` : "Preview" })}</div>
+      ${noChars ? `<p class="hint">Tip: add characters in the Characters tab so you can pick who speaks.</p>` : ""}
+      <div class="lines">${lines}</div>
+      <div class="row"><button class="btn" data-act="add-line">+ Add line</button></div>
+    </div></section>`;
+}
+
+function charsView() {
+  const canUpload = S.mode !== "starting";
+  const cards = S.project.characters.map((c) => `
+    <article class="card" data-char="${esc(c.id)}">
+      <div class="card-art">${c.image ? `<img src="${esc(imgSrc(c.image))}" alt="${esc(c.name)}">` : silhouette(c)}</div>
+      <div class="card-body">
+        <div class="row">
+          <label class="field">Name<input type="text" id="cn-${esc(c.id)}" data-f="char-name" value="${esc(c.name)}"></label>
+          <label class="field" style="flex:0 0 auto">Colour<input type="color" id="cc-${esc(c.id)}" data-f="char-color" value="${esc(c.color || "#888888")}"></label>
+        </div>
+        <div class="row">
+          <span class="btn file-btn" ${canUpload ? "" : "aria-disabled=true"}>${c.image ? "Change image" : "Upload image"}<input type="file" accept="image/png,image/jpeg,image/webp" data-upload="char" aria-label="Upload character image"></span>
+          ${c.image ? `<button class="btn" data-act="clear-img">Remove image</button>` : ""}
+          ${delBtn(c.id)}
+        </div>
+      </div>
+    </article>`).join("");
+  return `
+    <section class="grid-head" style="margin-bottom:12px">
+      <div><h2>Characters</h2><p class="hint">A PNG with a transparent background looks best. The colour is used for the name tag.</p></div>
+      <button class="btn primary" data-act="add-char">+ Add character</button>
+    </section>
+    ${cards ? `<div class="cards">${cards}</div>` : `<div class="empty"><h2>No characters yet</h2><p>Add the people who will talk in your game.</p><button class="btn primary" data-act="add-char">+ Add character</button></div>`}`;
+}
+
+function bgsView() {
+  const cards = S.project.backgrounds.map((b) => `
+    <article class="card" data-bg="${esc(b.id)}">
+      <div class="card-art wide" style="${b.image ? `background-image:url('${esc(imgSrc(b.image))}')` : `background:${esc(b.color || "#15131a")}`}"></div>
+      <div class="card-body">
+        <div class="row">
+          <label class="field">Name<input type="text" id="bn-${esc(b.id)}" data-f="bg-name" value="${esc(b.name)}"></label>
+          <label class="field" style="flex:0 0 auto">Colour<input type="color" id="bc-${esc(b.id)}" data-f="bg-color" value="${esc(b.color || "#15131a")}"></label>
+        </div>
+        <div class="row">
+          <span class="btn file-btn">${b.image ? "Change image" : "Upload image"}<input type="file" accept="image/png,image/jpeg,image/webp" data-upload="bg" aria-label="Upload background image"></span>
+          ${b.image ? `<button class="btn" data-act="clear-img">Remove image</button>` : ""}
+          ${delBtn(b.id)}
+        </div>
+      </div>
+    </article>`).join("");
+  return `
+    <section class="grid-head" style="margin-bottom:12px">
+      <div><h2>Backgrounds</h2><p class="hint">Where the scene takes place. Without an image, the colour is used.</p></div>
+      <button class="btn primary" data-act="add-bg">+ Add background</button>
+    </section>
+    ${cards ? `<div class="cards">${cards}</div>` : `<div class="empty"><h2>No backgrounds yet</h2><p>Add places like "Hallway, floor 10" or "Restaurant".</p><button class="btn primary" data-act="add-bg">+ Add background</button></div>`}`;
+}
+
+function refreshPreview() {
+  const conv = currentConv();
+  const el = $("#preview");
+  if (!conv || !el) return;
+  const idx = Math.max(0, conv.lines.findIndex((l) => l.id === S.lineId));
+  el.innerHTML = stageHtml(conv, idx, { label: conv.lines.length ? `Line ${idx + 1} of ${conv.lines.length}` : "Preview" });
+  document.querySelectorAll(".line").forEach((n) => n.setAttribute("aria-current", String(n.dataset.line === S.lineId)));
+}
+
+// ---------------------------------------------------------------------------
+// Actions
+// ---------------------------------------------------------------------------
+const COLORS = ["#7fc8a9", "#e0874a", "#c792ea", "#f2c94c", "#6a8fd1", "#e8445a", "#d9d6cf"];
+
+function deleteThing(id) {
+  const p = S.project;
+  if (p.conversations.some((c) => c.id === id)) {
+    p.conversations = p.conversations.filter((c) => c.id !== id);
+    S.convId = null;
+  } else if (p.characters.some((c) => c.id === id)) {
+    p.characters = p.characters.filter((c) => c.id !== id);
+    p.conversations.forEach((cv) => cv.lines.forEach((l) => { if (l.speaker === id) l.speaker = NARRATION; }));
+  } else if (p.backgrounds.some((b) => b.id === id)) {
+    p.backgrounds = p.backgrounds.filter((b) => b.id !== id);
+    p.conversations.forEach((cv) => cv.lines.forEach((l) => { if (l.bg === id) l.bg = SAME_BG; }));
+  } else {
+    const conv = currentConv();
+    if (conv) {
+      const i = conv.lines.findIndex((l) => l.id === id);
+      conv.lines = conv.lines.filter((l) => l.id !== id);
+      const next = conv.lines[Math.min(i, conv.lines.length - 1)];
+      S.lineId = next ? next.id : null;
+    }
+  }
+  pickDefaults();
+}
+
+document.addEventListener("click", (e) => {
+  const tab = e.target.closest(".tab");
+  if (tab) { S.tab = tab.dataset.tab; S.armed = null; render(); return; }
+
+  const btn = e.target.closest("[data-act]");
+  const lineEl = e.target.closest(".line");
+  if (lineEl && (!btn || btn.dataset.act !== "del") && S.lineId !== lineEl.dataset.line) {
+    S.lineId = lineEl.dataset.line;
+    refreshPreview();
+  }
+  if (!btn) { if (S.armed) { S.armed = null; render(); } return; }
+
+  const act = btn.dataset.act;
+  if (act !== "del" && S.armed) S.armed = null;
+  const conv = currentConv();
+  const p = S.project;
+
+  switch (act) {
+    case "goto": S.tab = btn.dataset.tab; break;
+    case "pick-conv": S.convId = btn.dataset.id; S.lineId = null; pickDefaults(); break;
+    case "add-conv": {
+      const c = { id: uid(), name: `Conversation ${p.conversations.length + 1}`, lines: [] };
+      p.conversations.push(c);
+      S.convId = c.id; S.lineId = null; S.tab = "conv";
+      changed(); break;
+    }
+    case "add-line": {
+      const n = conv.lines.length;
+      // Alternate speakers by default: most conversations go back and forth.
+      const speaker = n >= 2 ? conv.lines[n - 2].speaker : n === 1 ? (p.characters.find((c) => c.id !== conv.lines[0].speaker) || {}).id || "" : (p.characters[0] || {}).id || "";
+      const line = { id: uid(), speaker: speaker || NARRATION, bg: SAME_BG, text: "" };
+      conv.lines.push(line);
+      S.lineId = line.id;
+      changed();
+      render();
+      const ta = document.getElementById("tx-" + line.id);
+      if (ta) { ta.focus(); ta.scrollIntoView({ block: "center", behavior: "smooth" }); }
+      return;
+    }
+    case "up": case "down": {
+      const id = lineEl.dataset.line;
+      const i = conv.lines.findIndex((l) => l.id === id);
+      const j = act === "up" ? i - 1 : i + 1;
+      if (j < 0 || j >= conv.lines.length) return;
+      [conv.lines[i], conv.lines[j]] = [conv.lines[j], conv.lines[i]];
+      S.lineId = id;
+      changed(); break;
+    }
+    case "del": {
+      const id = btn.dataset.id;
+      if (S.armed !== id) { S.armed = id; render(); return; }
+      S.armed = null;
+      deleteThing(id);
+      changed(); break;
+    }
+    case "add-char":
+      p.characters.push({ id: uid(), name: "New character", color: COLORS[p.characters.length % COLORS.length], image: null });
+      changed(); break;
+    case "add-bg":
+      p.backgrounds.push({ id: uid(), name: "New background", color: "#2a2430", image: null });
+      changed(); break;
+    case "clear-img": {
+      const card = btn.closest("[data-char],[data-bg]");
+      const t = card.dataset.char ? charById(card.dataset.char) : bgById(card.dataset.bg);
+      if (t) t.image = null;
+      changed(); break;
+    }
+    case "play": openPlayer(); return;
+  }
+  render();
+});
+
+document.addEventListener("input", (e) => {
+  const f = e.target.dataset.f;
+  if (!f) return;
+  const v = e.target.value;
+  const conv = currentConv();
+  const lineEl = e.target.closest(".line");
+  const line = lineEl && conv ? conv.lines.find((l) => l.id === lineEl.dataset.line) : null;
+  const charCard = e.target.closest("[data-char]");
+  const bgCard = e.target.closest("[data-bg]");
+
+  if (f === "text" && line) line.text = v;
+  else if (f === "speaker" && line) line.speaker = v;
+  else if (f === "bg" && line) line.bg = v;
+  else if (f === "conv-name" && conv) {
+    conv.name = v;
+    const item = document.querySelector(`.conv-item[data-id="${CSS.escape(conv.id)}"] span`);
+    if (item) item.textContent = v || "Untitled";
+  }
+  else if (f === "char-name" && charCard) charById(charCard.dataset.char).name = v;
+  else if (f === "char-color" && charCard) { const c = charById(charCard.dataset.char); c.color = v; const s = charCard.querySelector(".silhouette"); if (s) s.style.setProperty("--c", v); }
+  else if (f === "bg-name" && bgCard) bgById(bgCard.dataset.bg).name = v;
+  else if (f === "bg-color" && bgCard) { const b = bgById(bgCard.dataset.bg); b.color = v; if (!b.image) bgCard.querySelector(".card-art").style.background = v; }
+  else return;
+
+  if (line) { S.lineId = line.id; refreshPreview(); }
+  changed();
+});
+
+document.addEventListener("change", (e) => {
+  const kind = e.target.dataset.upload;
+  if (!kind) return;
+  const card = e.target.closest(kind === "char" ? "[data-char]" : "[data-bg]");
+  const target = kind === "char" ? charById(card.dataset.char) : bgById(card.dataset.bg);
+  if (target) handleUpload(e.target, target, kind);
+});
+
+// ---------------------------------------------------------------------------
+// Play mode: typewriter, click or Space to continue
+// ---------------------------------------------------------------------------
+let typer = null;
+
+function openPlayer() {
+  const conv = currentConv();
+  if (!conv || !conv.lines.length) return;
+  S.play = { convId: conv.id, index: 0 };
+  $("#player").hidden = false;
+  showPlayLine();
+}
+
+function closePlayer() {
+  if (typer) clearInterval(typer.timer);
+  typer = null;
+  S.play = null;
+  $("#player").hidden = true;
+}
+
+function playerShell(inner) {
+  const conv = currentConv();
+  return `<div class="player-inner">
+    <div class="player-bar"><span>${esc(conv ? conv.name : "")}</span><button class="btn" data-pact="close">Close ✕</button></div>
+    ${inner}
+    <div class="hint" style="color:#a49fb0">Click the screen or press Space to continue. Esc closes.</div>
+  </div>`;
+}
+
+function showPlayLine() {
+  const conv = currentConv();
+  const { index } = S.play;
+  const full = conv.lines[index].text || "";
+  const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  let shown = reduce ? full.length : 0;
+  const draw = (done) => {
+    $("#player").innerHTML = playerShell(stageHtml(conv, index, { text: full.slice(0, shown), nextHint: done }));
+  };
+  if (typer) clearInterval(typer.timer);
+  if (shown >= full.length) { typer = null; draw(true); return; }
+  typer = {
+    finish() { clearInterval(this.timer); typer = null; shown = full.length; draw(true); },
+    timer: setInterval(() => { shown += 2; if (shown >= full.length) typer.finish(); else draw(false); }, 24),
+  };
+  draw(false);
+}
+
+function advance() {
+  if (!S.play) return;
+  if (typer) { typer.finish(); return; }
+  const conv = currentConv();
+  if (S.play.index < conv.lines.length - 1) { S.play.index++; showPlayLine(); return; }
+  const end = `<div class="end-card">End of conversation<div class="row"><button class="btn" data-pact="replay">Play again</button><button class="btn" data-pact="close">Back to editing</button></div></div>`;
+  $("#player").innerHTML = playerShell(stageHtml(conv, S.play.index, { end }));
+  S.play.ended = true;
+}
+
+$("#player").addEventListener("click", (e) => {
+  const b = e.target.closest("[data-pact]");
+  if (b) {
+    if (b.dataset.pact === "close") closePlayer();
+    else if (b.dataset.pact === "replay") { S.play = { convId: S.play.convId, index: 0 }; showPlayLine(); }
+    return;
+  }
+  if (e.target.closest(".stage") && !(S.play && S.play.ended)) advance();
+});
+
+document.addEventListener("keydown", (e) => {
+  if (!S.play) return;
+  if (e.key === "Escape") { closePlayer(); return; }
+  if ((e.key === " " || e.key === "Enter" || e.key === "ArrowRight") && !S.play.ended) { e.preventDefault(); advance(); }
+});
+
+start();
+</script>
